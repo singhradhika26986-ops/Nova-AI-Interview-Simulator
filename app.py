@@ -36,7 +36,7 @@ ANSWER_TIME_LIMIT = 20
 TOTAL_PRACTICE_QUESTIONS = get_total_practice_question_count()
 SESSION_FILE = Path(__file__).with_name("remembered_session.json")
 
-st.set_page_config(page_title="AI Interview Simulator", page_icon="AI", layout="wide")
+st.set_page_config(page_title="SARA", page_icon="AI", layout="wide")
 
 st.markdown(
     """
@@ -608,7 +608,7 @@ def render_auth_screen():
         st.markdown(
             """
             <div class="auth-hero">
-                <div class="nova-badge">Nova Secure Access</div>
+                <div class="nova-badge">SARA Secure Access</div>
                 <h2 class="auth-title">Welcome to Your Interview Workspace</h2>
                 <p class="auth-copy">
                     Sign in once and continue your interview journey securely on this device.
@@ -1136,8 +1136,8 @@ if not st.session_state.auth_checked:
 st.markdown(
     """
     <div class="card">
-        <div class="nova-badge">Nova AI Recruiter Suite</div>
-        <h1 class="hero-title">AI Interview Simulator</h1>
+        <div class="nova-badge">SARA Interview Suite</div>
+        <h1 class="hero-title">SARA</h1>
         <p class="hero-subtitle">
             Recruiter-style mock interviews with smart feedback, analytics, and report export.
         </p>
