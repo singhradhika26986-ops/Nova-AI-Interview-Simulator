@@ -1,0 +1,11 @@
+streamlit
+openai
+gtts
+opencv-python
+matplotlib
+streamlit-webrtc
+SpeechRecognition
+av
+reportlab
+fastapi
+uvicorn

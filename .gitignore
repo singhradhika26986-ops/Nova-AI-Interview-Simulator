@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.mp3
+.env
+.streamlit/
+*.db
+*.pdf
+remembered_session.json
