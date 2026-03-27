@@ -230,6 +230,74 @@ st.markdown(
         line-height: 1.9;
         font-weight: 600;
     }
+    @media (max-width: 900px) {
+        .card {
+            padding: 20px;
+            border-radius: 22px;
+        }
+        .hero-title {
+            font-size: 2.5rem;
+            line-height: 1.12;
+        }
+        .hero-subtitle {
+            font-size: 1rem;
+            line-height: 1.65;
+        }
+        .auth-grid,
+        .status-shell {
+            grid-template-columns: 1fr;
+        }
+        .auth-title {
+            font-size: 1.85rem;
+        }
+        .question-text {
+            font-size: 1.16rem;
+            line-height: 1.5;
+        }
+    }
+    @media (max-width: 640px) {
+        .card,
+        .auth-hero,
+        .question-shell,
+        .final-shell {
+            padding: 16px;
+            border-radius: 18px;
+        }
+        .nova-badge,
+        .hero-pill {
+            font-size: 0.82rem;
+            padding: 8px 12px;
+        }
+        .hero-title {
+            font-size: 2rem;
+            line-height: 1.08;
+            letter-spacing: -0.03em;
+            color: #0f172a !important;
+            text-shadow: none;
+        }
+        .hero-subtitle,
+        .auth-copy {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .section-title {
+            font-size: 1.02rem;
+        }
+        .question-text {
+            font-size: 1.02rem;
+        }
+        .auth-title {
+            font-size: 1.55rem;
+            line-height: 1.2;
+        }
+        .auth-list {
+            padding-left: 16px;
+            line-height: 1.75;
+        }
+        div[data-testid="stButton"] > button {
+            min-height: 44px;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
