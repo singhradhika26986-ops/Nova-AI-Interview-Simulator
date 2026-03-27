@@ -1,31 +1,51 @@
-# Nova AI Interview Simulator
+# SARA - AI Interview Simulator
 
-Nova AI Interview Simulator is a final year project built with Python and Streamlit. It provides secure login, remembered sessions, a 500-question interview practice library, voice-guided mock interviews, interview history tracking, and downloadable assessment reports.
+SARA is a final year project built using Python, Streamlit, and SQLite to help students prepare for technical interviews in a realistic and structured way. The platform includes secure login, a large interview practice library, performance analytics, exportable reports, and a voice-guided AI interviewer named Nova.
 
-## Features
+## Live Demo
 
-- Secure login and remembered device session
-- Student and admin roles
-- 500 professional practice questions with answers
-- Topic-based interview simulation
-- Voice-guided recruiter-style interview flow
-- AI and local rule-based answer evaluation
-- Practice bookmarks and completion tracking
-- Daily random practice set
-- Interview history and downloadable reports
-- Admin analytics dashboard
+[Open the live app](https://nova-ai-interview-simulator-xrcdue6mbfnh2zvsn5x4qg.streamlit.app)
+
+## Project Overview
+
+SARA is designed as an interview preparation platform for students who want to practice technical interviews before placements. It combines guided mock interviews, AI-style evaluation, saved progress, and interview history into one system.
+
+The app supports topic-based mock interviews across core computer science areas and gives structured feedback to help users improve clarity, confidence, and technical explanation.
+
+## Key Features
+
+- Secure login with remembered session on the same device
+- Student and admin access modes
+- 500+ interview practice questions with model answers
+- Topic-based mock interviews in Python, DSA, DBMS, and OOP
+- Voice-guided AI interviewer experience through Nova
+- Smart answer evaluation with feedback and scoring
+- Performance analytics dashboard
+- Interview history tracking
+- Downloadable text and PDF interview reports
+- Practice bookmarks, completion tracking, and daily random question sets
+
+## Tech Stack
+
+- Python
+- Streamlit
+- SQLite
+- SpeechRecognition
+- ReportLab
 
 ## Main Modules
 
-- `app.py` - Main application
-- `launcher.py` - Desktop app launcher
-- `auth.py` - Authentication and persistent sessions
-- `database.py` - SQLite storage
-- `qa_dataset.py` - Practice and interview question banks
-- `question_generator.py` - Question generation helpers
-- `answer_evaluator.py` - Evaluation logic
-- `report_export.py` - Text and PDF report export
-- `dashboard.py` - Analytics charts
+- `app.py` - Main Streamlit application
+- `auth.py` - Authentication and remembered login support
+- `database.py` - SQLite database operations
+- `qa_dataset.py` - Interview and practice question bank
+- `question_generator.py` - Topic-based question utilities
+- `answer_evaluator.py` - AI/local evaluation logic
+- `dashboard.py` - Performance analytics display
+- `report_export.py` - Text and PDF report generation
+- `face_detection.py` - Browser camera and face check support
+- `voice_input.py` - Voice input utilities
+- `launcher.py` - Desktop launcher helper
 
 ## Run Locally
 
@@ -35,49 +55,53 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Build Windows App
+## Deployment
 
-This project can be packaged as a Windows desktop app using PyInstaller.
+This project is deployed on Streamlit Community Cloud and can also be run locally for demo or development.
+
+## Build as a Windows App
+
+You can package the project as a Windows executable using PyInstaller.
 
 ```powershell
 cd C:\Users\ASUS\Desktop\AI_Interview_Simulator
 .\build_exe.ps1
 ```
 
-After build:
+Expected output:
 
-- Executable path:
-  `dist\NovaInterviewSimulator\NovaInterviewSimulator.exe`
-
-## Mobile / Play Store Path
-
-This project is not directly uploadable to the Play Store in its current Streamlit form.
-For Play Store conversion:
-
-- Use `mobile_api.py` as the backend API layer
-- Build an Android frontend using Flutter
-- See [PLAYSTORE_CONVERSION.md](C:\Users\ASUS\Desktop\AI_Interview_Simulator\PLAYSTORE_CONVERSION.md)
+- `dist\NovaInterviewSimulator\NovaInterviewSimulator.exe`
 
 ## Login Behavior
 
-- Users log in once
-- Session is remembered on the same device
+- Users log in once and the session is remembered on the same device
 - Logout clears the remembered session
-
-## Deliverables Added
-
-- [RESUME_POINTS.md](C:\Users\ASUS\Desktop\AI_Interview_Simulator\RESUME_POINTS.md)
-- [PROJECT_SYNOPSIS.md](C:\Users\ASUS\Desktop\AI_Interview_Simulator\PROJECT_SYNOPSIS.md)
-- [PPT_CONTENT.md](C:\Users\ASUS\Desktop\AI_Interview_Simulator\PPT_CONTENT.md)
-- [VIVA_QA.md](C:\Users\ASUS\Desktop\AI_Interview_Simulator\VIVA_QA.md)
+- Interview and progress data are stored locally in SQLite
 
 ## Admin Demo Account
 
 - Email: `admin@interviewsimulator.local`
 - Password: `Admin@123`
 
+## Project Deliverables
+
+- `RESUME_POINTS.md`
+- `PROJECT_SYNOPSIS.md`
+- `PPT_CONTENT.md`
+- `VIVA_QA.md`
+- `PLAYSTORE_CONVERSION.md`
+
 ## Notes
 
-- Interview data is stored locally in `interview_simulator.db`
-- Remembered login is stored locally in `remembered_session.json`
-- Browser microphone auto-start is limited by browser security rules
+- Interview data is stored in `interview_simulator.db`
+- Remembered login is stored in `remembered_session.json`
+- Browser microphone auto-start is limited by browser security policies
+- Direct Play Store upload is not supported for the current Streamlit version without a separate mobile frontend
+
+## Future Scope
+
+- More interview domains and advanced question sets
+- Better adaptive evaluation logic
+- Cloud database integration
+- Recruiter panel with centralized candidate review
+- Mobile app version using Flutter + backend API
