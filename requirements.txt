@@ -1,6 +1,7 @@
 streamlit
 openai
 gtts
+edge-tts
 opencv-python
 matplotlib
 streamlit-webrtc
