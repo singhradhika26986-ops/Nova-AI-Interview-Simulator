@@ -33,7 +33,7 @@ from voice import speak
 
 
 MAX_QUESTIONS = 5
-ANSWER_TIME_LIMIT = 20
+ANSWER_TIME_LIMIT = 30
 TOTAL_PRACTICE_QUESTIONS = get_total_practice_question_count()
 SESSION_FILE = Path(__file__).with_name("remembered_session.json")
 
@@ -328,10 +328,83 @@ st.markdown(
             min-height: 44px;
         }
     }
+    .bot-avatar-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    .bot-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        background: linear-gradient(135deg, #7C3AED, #2563EB 55%, #0EA5E9 100%);
+        box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.18);
+        flex-shrink: 0;
+    }
+    .bot-avatar.speaking {
+        animation: bot-pulse 1.1s ease-in-out infinite;
+    }
+    @keyframes bot-pulse {
+        0% { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.28), 0 0 0 0 rgba(56, 189, 248, 0.5); }
+        70% { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.28), 0 0 0 18px rgba(56, 189, 248, 0); }
+        100% { box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.28), 0 0 0 0 rgba(56, 189, 248, 0); }
+    }
+    .bot-status-text {
+        font-weight: 700;
+        color: #F3F0FF;
+    }
+    .bot-status-sub {
+        font-size: 0.85rem;
+        color: #93A3D6;
+    }
+    .sound-bars {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 18px;
+        margin-left: 10px;
+    }
+    .sound-bars span {
+        width: 4px;
+        background: #38BDF8;
+        border-radius: 2px;
+        animation: sound-bounce 0.9s ease-in-out infinite;
+    }
+    .sound-bars span:nth-child(1) { animation-delay: 0s; height: 6px; }
+    .sound-bars span:nth-child(2) { animation-delay: 0.15s; height: 14px; }
+    .sound-bars span:nth-child(3) { animation-delay: 0.3s; height: 9px; }
+    .sound-bars span:nth-child(4) { animation-delay: 0.45s; height: 16px; }
+    @keyframes sound-bounce {
+        0%, 100% { transform: scaleY(0.4); }
+        50% { transform: scaleY(1); }
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+
+def render_bot_avatar(speaking: bool, label: str = None):
+    bars = '<span class="sound-bars"><span></span><span></span><span></span><span></span></span>' if speaking else ""
+    status = label or ("Smith is speaking..." if speaking else "Smith is listening")
+    sub = "Please wait while the question is read out." if speaking else "Go ahead and answer when you're ready."
+    st.markdown(
+        f"""
+        <div class="bot-avatar-row">
+            <div class="bot-avatar {'speaking' if speaking else ''}">🤖</div>
+            <div>
+                <div class="bot-status-text">{status}{bars}</div>
+                <div class="bot-status-sub">{sub}</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def init_session_state():
@@ -485,15 +558,43 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
         keywords=current_round.get("keywords", []),
     )
 
+    if time_expired and not answer.strip():
+        skip_message = "It's okay if you don't know the answer, let's move to the next question."
+        evaluation["summary"] = skip_message
+        st.session_state.results.append(
+            {
+                "question": current_round["question"],
+                **evaluation,
+            }
+        )
+        st.session_state.live_feedback = skip_message
+        safe_audio(skip_message, prompt_key=f"skip_{current_index}")
+
+        if current_index + 1 < len(st.session_state.interview_plan):
+            st.session_state.question_index += 1
+            st.session_state.question_started_at = None
+            st.session_state.conversation_stage = "question"
+        else:
+            st.session_state.started = False
+            st.session_state.conversation_stage = "completed"
+            report_text, average_score, recommendation = save_completed_interview()
+            st.session_state.completion_payload = {
+                "report_text": report_text,
+                "average_score": average_score,
+                "recommendation": recommendation,
+            }
+        st.rerun()
+        return
+
     if time_expired:
         evaluation["summary"] = (
-            "The answer window expired after 20 seconds. The system evaluated the available response."
+            f"The answer window expired after {ANSWER_TIME_LIMIT} seconds. The system evaluated the available response."
         )
 
     if evaluation["overall_score"] < 6 and not st.session_state.clarification_requested:
         st.session_state.pending_evaluation = evaluation
         st.session_state.clarification_requested = True
-        st.session_state.question_started_at = time.time()
+        st.session_state.question_started_at = None
         st.session_state.live_feedback = (
             "I would like a clearer explanation. Please answer once more with a short definition, one relevant example, and a well-structured response."
         )
@@ -523,7 +624,7 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
 
     if current_index + 1 < len(st.session_state.interview_plan):
         st.session_state.question_index += 1
-        st.session_state.question_started_at = time.time()
+        st.session_state.question_started_at = None
         st.session_state.conversation_stage = "question"
         safe_audio(
             "Your answer has been reviewed. We will now move to the next question.",
@@ -787,13 +888,14 @@ def render_student_interview_tab():
                 st.markdown("<div class='smith-badge'>Smith AI Recruiter</div>", unsafe_allow_html=True)
                 st.markdown("<div class='section-title'>Interview Introduction</div>", unsafe_allow_html=True)
                 intro_text = st.session_state.live_feedback or build_intro_script(current_user["full_name"], topic)
+                render_bot_avatar(speaking=True, label="Smith is introducing the interview...")
                 st.info(intro_text)
                 safe_audio(intro_text, prompt_key="intro")
                 st.caption("Smith is introducing the interview. The first question will start automatically.")
                 st.markdown("</div>", unsafe_allow_html=True)
                 time.sleep(6)
                 st.session_state.conversation_stage = "question"
-                st.session_state.question_started_at = time.time()
+                st.session_state.question_started_at = None
                 st.rerun()
                 return
 
@@ -807,10 +909,6 @@ def render_student_interview_tab():
             )
             question_prompt_key = f"{'clarify' if is_clarification else 'question'}_{current_index}"
 
-            if st.session_state.question_started_at is None:
-                st.session_state.question_started_at = time.time()
-            deadline = st.session_state.question_started_at + ANSWER_TIME_LIMIT
-
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             st.markdown("<div class='smith-badge'>Smith AI Recruiter</div>", unsafe_allow_html=True)
             st.markdown(
@@ -822,11 +920,41 @@ def render_student_interview_tab():
             st.markdown("<div class='question-shell'>", unsafe_allow_html=True)
             st.markdown(f"<div class='question-text'>{prompt_text}</div>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
+            if st.session_state.question_started_at is None:
+                # Speaking phase: bot narrates the question, timer has not started yet.
+                render_bot_avatar(speaking=True)
+                safe_audio(prompt_text, prompt_key=question_prompt_key)
+                st.caption("🔊 If the audio did not start by itself, tap the play button above once — the timer will start right after Smith finishes speaking.")
+                begin_clicked = st.button("I'm ready, start the timer", key=f"begin_{current_index}_{question_prompt_key}", use_container_width=True)
+                wait_seconds = max(2, min(int(st.session_state.last_audio_seconds) + 1, 15))
+                auto_advance_html = f"""
+                <script>
+                setTimeout(() => {{
+                    try {{
+                        const buttons = window.parent.document.querySelectorAll('button');
+                        for (const btn of buttons) {{
+                            if (btn.innerText.includes("I'm ready, start the timer")) {{
+                                btn.click();
+                                break;
+                            }}
+                        }}
+                    }} catch (e) {{}}
+                }}, {wait_seconds * 1000});
+                </script>
+                """
+                components.html(auto_advance_html, height=0)
+                st.markdown("</div>", unsafe_allow_html=True)
+                if begin_clicked:
+                    st.session_state.question_started_at = time.time()
+                    st.rerun()
+                return
+
+            deadline = st.session_state.question_started_at + ANSWER_TIME_LIMIT
+            render_bot_avatar(speaking=False)
             st.caption(
                 f"Difficulty: {current_round.get('difficulty', 'Not specified')} | Time limit: {ANSWER_TIME_LIMIT} seconds"
             )
-            safe_audio(prompt_text, prompt_key=question_prompt_key)
-            st.caption("🔊 If the question audio did not start by itself, tap the play button on the audio bar above — most browsers block auto-playing sound until you interact with the page once.")
             render_countdown(deadline)
 
             audio_answer = st.audio_input(
