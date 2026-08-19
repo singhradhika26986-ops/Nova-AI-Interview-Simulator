@@ -50,9 +50,15 @@ st.markdown(
     <style>
     .stApp {
         background:
-            radial-gradient(circle at top left, rgba(14, 116, 144, 0.12), transparent 26%),
-            radial-gradient(circle at top right, rgba(15, 118, 110, 0.10), transparent 22%),
-            linear-gradient(135deg, #f8fafc 0%, #e5edf5 44%, #f2fbf7 100%);
+            radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 30%),
+            radial-gradient(circle at top right, rgba(167, 139, 250, 0.14), transparent 26%),
+            linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 44%, #F8FAFF 100%);
+    }
+    div[data-testid="stButton"] > button[kind="primary"],
+    .stButton > button:first-child {
+        background: linear-gradient(135deg, #6D28D9, #4F46E5 60%, #6366F1 100%) !important;
+        color: white !important;
+        border: none !important;
     }
     .card {
         background: rgba(255, 255, 255, 0.92);
@@ -65,7 +71,7 @@ st.markdown(
     }
     .mini-card {
         background: #ffffff;
-        border-left: 6px solid #0f766e;
+        border-left: 6px solid #6D28D9;
         border-radius: 16px;
         padding: 16px;
         margin-bottom: 14px;
@@ -92,7 +98,7 @@ st.markdown(
         margin-top: 18px;
     }
     .hero-pill {
-        background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(14, 116, 144, 0.11));
+        background: linear-gradient(135deg, rgba(109, 40, 217, 0.1), rgba(79, 70, 229, 0.11));
         color: #0f172a;
         padding: 9px 14px;
         border-radius: 999px;
@@ -113,7 +119,7 @@ st.markdown(
         gap: 8px;
         padding: 8px 14px;
         border-radius: 999px;
-        background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(14, 116, 144, 0.12));
+        background: linear-gradient(135deg, rgba(109, 40, 217, 0.12), rgba(79, 70, 229, 0.12));
         border: 1px solid rgba(15, 23, 42, 0.06);
         color: #0f172a;
         font-size: 0.92rem;
@@ -162,8 +168,8 @@ st.markdown(
     .note-box {
         padding: 14px 16px;
         border-radius: 16px;
-        background: rgba(14, 116, 144, 0.08);
-        border: 1px solid rgba(14, 116, 144, 0.12);
+        background: rgba(79, 70, 229, 0.08);
+        border: 1px solid rgba(79, 70, 229, 0.12);
         color: #0f172a;
         margin-top: 10px;
         margin-bottom: 14px;
@@ -176,7 +182,7 @@ st.markdown(
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
     }
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: linear-gradient(135deg, #0f766e, #0f766e 35%, #0ea5a4 100%);
+        background: linear-gradient(135deg, #6D28D9, #6D28D9 35%, #4F46E5 100%);
         color: white;
     }
     div[data-testid="stDownloadButton"] > button {
@@ -198,7 +204,7 @@ st.markdown(
         color: #94a3b8 !important;
     }
     .final-shell {
-        background: linear-gradient(135deg, rgba(15, 118, 110, 0.10), rgba(14, 116, 144, 0.08));
+        background: linear-gradient(135deg, rgba(109, 40, 217, 0.10), rgba(79, 70, 229, 0.08));
         border: 1px solid rgba(15, 23, 42, 0.06);
         border-radius: 22px;
         padding: 18px;
@@ -211,7 +217,7 @@ st.markdown(
         align-items: stretch;
     }
     .auth-hero {
-        background: linear-gradient(180deg, rgba(15, 118, 110, 0.10), rgba(14, 116, 144, 0.08));
+        background: linear-gradient(180deg, rgba(109, 40, 217, 0.10), rgba(79, 70, 229, 0.08));
         border: 1px solid rgba(15, 23, 42, 0.06);
         border-radius: 24px;
         padding: 24px;
@@ -420,7 +426,7 @@ def render_countdown(deadline):
     remaining_seconds = max(0, int(deadline - time.time()))
     timer_html = f"""
     <div style="margin: 10px 0 18px 0; padding: 12px 16px; border-radius: 14px;
-                background: rgba(15, 118, 110, 0.08); border: 1px solid rgba(15, 118, 110, 0.12);
+                background: rgba(109, 40, 217, 0.08); border: 1px solid rgba(109, 40, 217, 0.12);
                 color: #0f172a; font-weight: 700;">
         Answer Timer: <span id="smith-timer">{remaining_seconds}</span> seconds left
     </div>
@@ -771,7 +777,6 @@ def render_student_interview_tab():
                 else current_round["question"]
             )
             question_prompt_key = f"{'clarify' if is_clarification else 'question'}_{current_index}"
-            voice_already_played = question_prompt_key in st.session_state.spoken_prompts
 
             if st.session_state.question_started_at is None:
                 st.session_state.question_started_at = time.time()
@@ -791,19 +796,12 @@ def render_student_interview_tab():
             st.caption(
                 f"Difficulty: {current_round.get('difficulty', 'Not specified')} | Time limit: {ANSWER_TIME_LIMIT} seconds"
             )
-            if not voice_already_played and st.session_state.voice_enabled:
-                safe_audio(prompt_text, prompt_key=question_prompt_key)
-                st.info("Smith is speaking the question. The microphone will open automatically once it finishes.")
-                st.session_state.question_started_at = time.time() + st.session_state.last_audio_seconds
-                time.sleep(min(st.session_state.last_audio_seconds, 8))
-                st.rerun()
-                return
-
             safe_audio(prompt_text, prompt_key=question_prompt_key)
+            st.caption("🔊 If the question audio did not start by itself, tap the play button on the audio bar above — most browsers block auto-playing sound until you interact with the page once.")
             render_countdown(deadline)
 
             audio_answer = st.audio_input(
-                "Speak your answer (recording opens automatically, click stop when you are done)",
+                "Speak your answer (tap the mic to record, tap again to stop)",
                 key=f"audio_answer_{current_index}_{'clarify' if is_clarification else 'main'}",
             )
             transcript, transcript_error = transcribe_audio(audio_answer)
