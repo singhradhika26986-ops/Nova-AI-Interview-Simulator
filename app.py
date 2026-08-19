@@ -50,43 +50,50 @@ st.markdown(
     <style>
     .stApp {
         background:
-            radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 30%),
-            radial-gradient(circle at top right, rgba(167, 139, 250, 0.14), transparent 26%),
-            linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 44%, #F8FAFF 100%);
+            radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 32%),
+            radial-gradient(circle at top right, rgba(147, 51, 234, 0.20), transparent 30%),
+            linear-gradient(160deg, #0B0B2A 0%, #170B3B 42%, #0A1A3D 100%);
+    }
+    .stApp, .stApp p, .stApp span, .stApp label, .stMarkdown {
+        color: #E5E9FF;
     }
     div[data-testid="stButton"] > button[kind="primary"],
     .stButton > button:first-child {
-        background: linear-gradient(135deg, #6D28D9, #4F46E5 60%, #6366F1 100%) !important;
+        background: linear-gradient(135deg, #7C3AED, #2563EB 55%, #0EA5E9 100%) !important;
         color: white !important;
         border: none !important;
     }
     .card {
-        background: rgba(255, 255, 255, 0.92);
-        border: 1px solid rgba(15, 23, 42, 0.05);
+        background: rgba(23, 17, 60, 0.65);
+        border: 1px solid rgba(147, 197, 253, 0.16);
         border-radius: 26px;
         padding: 28px;
-        box-shadow: 0 24px 68px rgba(15, 23, 42, 0.07);
+        box-shadow: 0 24px 68px rgba(2, 6, 23, 0.55), 0 0 0 1px rgba(124, 58, 237, 0.08);
         margin-bottom: 22px;
-        backdrop-filter: blur(10px);
+        backdrop-filter: blur(14px);
     }
     .mini-card {
-        background: #ffffff;
-        border-left: 6px solid #6D28D9;
+        background: rgba(15, 23, 55, 0.85);
+        border-left: 6px solid #38BDF8;
         border-radius: 16px;
         padding: 16px;
         margin-bottom: 14px;
-        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 12px 24px rgba(2, 6, 23, 0.4);
+        color: #E5E9FF;
     }
     .hero-title {
         font-size: 3.7rem;
         font-weight: 800;
         letter-spacing: -0.04em;
-        color: #0f172a;
+        background: linear-gradient(135deg, #C4B5FD, #93C5FD 60%, #67E8F9 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
         margin: 0 0 10px 0;
     }
     .hero-subtitle {
         font-size: 1.08rem;
-        color: #475569;
+        color: #B9C2E8;
         line-height: 1.75;
         max-width: 920px;
         margin: 0;
@@ -98,18 +105,18 @@ st.markdown(
         margin-top: 18px;
     }
     .hero-pill {
-        background: linear-gradient(135deg, rgba(109, 40, 217, 0.1), rgba(79, 70, 229, 0.11));
-        color: #0f172a;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.28), rgba(14, 165, 233, 0.24));
+        color: #EDE9FE;
         padding: 9px 14px;
         border-radius: 999px;
         font-size: 0.92rem;
         font-weight: 600;
-        border: 1px solid rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(147, 197, 253, 0.22);
     }
     .section-title {
         font-size: 1.18rem;
         font-weight: 700;
-        color: #0f172a;
+        color: #EDE9FE;
         margin-bottom: 12px;
         letter-spacing: -0.02em;
     }
@@ -119,9 +126,9 @@ st.markdown(
         gap: 8px;
         padding: 8px 14px;
         border-radius: 999px;
-        background: linear-gradient(135deg, rgba(109, 40, 217, 0.12), rgba(79, 70, 229, 0.12));
-        border: 1px solid rgba(15, 23, 42, 0.06);
-        color: #0f172a;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(14, 165, 233, 0.30));
+        border: 1px solid rgba(147, 197, 253, 0.24);
+        color: #F3F0FF;
         font-size: 0.92rem;
         font-weight: 700;
         margin-bottom: 12px;
@@ -133,13 +140,13 @@ st.markdown(
         margin-top: 8px;
     }
     .status-card {
-        background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95));
-        border: 1px solid rgba(15, 23, 42, 0.06);
+        background: linear-gradient(180deg, rgba(30, 27, 75, 0.85), rgba(15, 23, 55, 0.85));
+        border: 1px solid rgba(147, 197, 253, 0.16);
         border-radius: 18px;
         padding: 16px;
     }
     .status-label {
-        color: #64748b;
+        color: #93A3D6;
         font-size: 0.82rem;
         font-weight: 600;
         text-transform: uppercase;
@@ -147,20 +154,20 @@ st.markdown(
         margin-bottom: 6px;
     }
     .status-value {
-        color: #0f172a;
+        color: #F3F0FF;
         font-size: 1.05rem;
         font-weight: 700;
     }
     .question-shell {
         padding: 22px;
         border-radius: 20px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.9));
-        border: 1px solid rgba(15, 23, 42, 0.06);
+        background: linear-gradient(180deg, rgba(30, 27, 75, 0.75), rgba(11, 26, 61, 0.75));
+        border: 1px solid rgba(56, 189, 248, 0.22);
         margin-bottom: 16px;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        box-shadow: inset 0 1px 0 rgba(147, 197, 253, 0.08);
     }
     .question-text {
-        color: #0f172a;
+        color: #F3F0FF;
         font-size: 1.38rem;
         font-weight: 700;
         line-height: 1.55;
@@ -168,9 +175,9 @@ st.markdown(
     .note-box {
         padding: 14px 16px;
         border-radius: 16px;
-        background: rgba(79, 70, 229, 0.08);
-        border: 1px solid rgba(79, 70, 229, 0.12);
-        color: #0f172a;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        color: #E5E9FF;
         margin-top: 10px;
         margin-bottom: 14px;
     }
@@ -179,33 +186,44 @@ st.markdown(
         border: none;
         min-height: 48px;
         font-weight: 700;
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 10px 24px rgba(2, 6, 23, 0.4);
     }
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: linear-gradient(135deg, #6D28D9, #6D28D9 35%, #4F46E5 100%);
+        background: linear-gradient(135deg, #7C3AED, #4F46E5 45%, #0EA5E9 100%);
         color: white;
     }
     div[data-testid="stDownloadButton"] > button {
         border-radius: 14px;
         min-height: 46px;
         font-weight: 700;
+        background: rgba(56, 189, 248, 0.16);
+        color: #E5E9FF;
+        border: 1px solid rgba(56, 189, 248, 0.3);
     }
     div[data-testid="stTextInput"] input, div[data-testid="stTextArea"] textarea {
         border-radius: 14px;
+        background: rgba(11, 15, 46, 0.6);
+        color: #F3F0FF;
+        border: 1px solid rgba(147, 197, 253, 0.2);
+    }
+    div[data-testid="stSelectbox"] div, div[data-baseweb="select"] {
+        background: rgba(11, 15, 46, 0.6);
+        color: #F3F0FF;
+        border-radius: 14px;
     }
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, #0A0A22 0%, #170B3B 55%, #0A1A3D 100%);
+        border-right: 1px solid rgba(124, 58, 237, 0.25);
     }
     section[data-testid="stSidebar"] * {
-        color: #e2e8f0 !important;
+        color: #E5E9FF !important;
     }
     section[data-testid="stSidebar"] .stCaption {
-        color: #94a3b8 !important;
+        color: #93A3D6 !important;
     }
     .final-shell {
-        background: linear-gradient(135deg, rgba(109, 40, 217, 0.10), rgba(79, 70, 229, 0.08));
-        border: 1px solid rgba(15, 23, 42, 0.06);
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.22), rgba(14, 165, 233, 0.16));
+        border: 1px solid rgba(147, 197, 253, 0.2);
         border-radius: 22px;
         padding: 18px;
         margin-bottom: 16px;
@@ -217,21 +235,21 @@ st.markdown(
         align-items: stretch;
     }
     .auth-hero {
-        background: linear-gradient(180deg, rgba(109, 40, 217, 0.10), rgba(79, 70, 229, 0.08));
-        border: 1px solid rgba(15, 23, 42, 0.06);
+        background: linear-gradient(180deg, rgba(124, 58, 237, 0.28), rgba(14, 165, 233, 0.18));
+        border: 1px solid rgba(147, 197, 253, 0.2);
         border-radius: 24px;
         padding: 24px;
         min-height: 100%;
     }
     .auth-title {
-        color: #0f172a;
+        color: #F3F0FF;
         font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: -0.03em;
         margin: 0 0 10px 0;
     }
     .auth-copy {
-        color: #475569;
+        color: #C7CFF5;
         font-size: 1rem;
         line-height: 1.75;
         margin: 0 0 18px 0;
@@ -239,7 +257,7 @@ st.markdown(
     .auth-list {
         margin: 0;
         padding-left: 18px;
-        color: #0f172a;
+        color: #F3F0FF;
         line-height: 1.9;
         font-weight: 600;
     }
@@ -285,7 +303,6 @@ st.markdown(
             font-size: 2rem;
             line-height: 1.08;
             letter-spacing: -0.03em;
-            color: #0f172a !important;
             text-shadow: none;
         }
         .hero-subtitle,
@@ -324,7 +341,7 @@ def init_session_state():
         "admin_mode": False,
         "voice_enabled": False,
         "voice_input_enabled": False,
-        "camera_enabled": False,
+        "camera_enabled": True,
         "face_verified": None,
         "started": False,
         "topic": "Python",
@@ -426,24 +443,36 @@ def render_countdown(deadline):
     remaining_seconds = max(0, int(deadline - time.time()))
     timer_html = f"""
     <div style="margin: 10px 0 18px 0; padding: 12px 16px; border-radius: 14px;
-                background: rgba(109, 40, 217, 0.08); border: 1px solid rgba(109, 40, 217, 0.12);
-                color: #0f172a; font-weight: 700;">
-        Answer Timer: <span id="smith-timer">{remaining_seconds}</span> seconds left
+                background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25);
+                color: #E0F2FE; font-weight: 700; font-family: sans-serif;">
+        ⏱ Answer Timer: <span id="smith-timer">{remaining_seconds}</span> seconds left
     </div>
     <script>
-    const deadline = {int(deadline * 1000)};
-    const timerElement = window.parent.document.getElementById("smith-timer");
-    if (timerElement) {{
-      const tick = () => {{
-        const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
-        timerElement.textContent = remaining;
-      }};
-      tick();
-      setInterval(tick, 1000);
-    }}
+    (() => {{
+        const deadline = {int(deadline * 1000)};
+        const timerElement = document.getElementById("smith-timer");
+        const tick = () => {{
+            const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+            if (timerElement) timerElement.textContent = remaining;
+            if (remaining <= 0) {{
+                clearInterval(intervalId);
+                try {{
+                    const buttons = window.parent.document.querySelectorAll('button');
+                    for (const btn of buttons) {{
+                        if (btn.innerText.includes("Submit Timed-Out Response")) {{
+                            btn.click();
+                            break;
+                        }}
+                    }}
+                }} catch (e) {{}}
+            }}
+        }};
+        tick();
+        const intervalId = setInterval(tick, 1000);
+    }})();
     </script>
     """
-    st.markdown(timer_html, unsafe_allow_html=True)
+    components.html(timer_html, height=54)
 
 
 def finalize_current_answer(current_user, current_round, answer, time_expired):
@@ -825,9 +854,11 @@ def render_student_interview_tab():
                 st.session_state.last_processed_answer_key = answer_key
                 finalize_current_answer(current_user, current_round, answer, time_expired)
 
-            if time_expired and not answer:
-                st.warning("Time is up. Please record a short answer clearly into the microphone.")
-                if st.button("Submit Timed-Out Response", use_container_width=True):
+            if not answer:
+                if time_expired:
+                    st.warning("Time is up. Submitting automatically...")
+                st.caption("The answer auto-submits when the timer ends. You can also submit early:")
+                if st.button("Submit Timed-Out Response", use_container_width=True, key=f"timeout_btn_{current_index}_{'clarify' if is_clarification else 'main'}"):
                     st.session_state.last_processed_answer_key = (
                         f"{current_index}|{'clarify' if is_clarification else 'main'}|timeout"
                     )
