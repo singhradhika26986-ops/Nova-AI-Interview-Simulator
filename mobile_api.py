@@ -14,7 +14,7 @@ from database import get_user_by_id, init_db, list_user_interviews
 from question_generator import build_interview_set, get_practice_questions, get_topics
 
 
-app = FastAPI(title="Nova AI Interview Mobile API", version="1.0.0")
+app = FastAPI(title="Smith AI Interview Mobile API", version="1.0.0")
 init_db()
 
 

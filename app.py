@@ -25,10 +25,11 @@ from database import (
     save_interview,
     upsert_practice_progress,
 )
-from face_detection import detect_face
+from face_detection import analyze_proctoring, detect_face
 from qa_dataset import get_total_practice_question_count
 from question_generator import build_interview_set, get_daily_practice_set, get_practice_questions, get_topics
 from report_export import generate_report_pdf, generate_report_text
+from voice import speak
 
 
 MAX_QUESTIONS = 5
@@ -36,7 +37,13 @@ ANSWER_TIME_LIMIT = 20
 TOTAL_PRACTICE_QUESTIONS = get_total_practice_question_count()
 SESSION_FILE = Path(__file__).with_name("remembered_session.json")
 
-st.set_page_config(page_title="SARA", page_icon="AI", layout="wide")
+LOGO_PATH = Path(__file__).with_name("assets") / "neuralix_logo.png"
+
+st.set_page_config(
+    page_title="Smith",
+    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "AI",
+    layout="wide",
+)
 
 st.markdown(
     """
@@ -100,7 +107,7 @@ st.markdown(
         margin-bottom: 12px;
         letter-spacing: -0.02em;
     }
-    .nova-badge {
+    .smith-badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -263,7 +270,7 @@ st.markdown(
             padding: 16px;
             border-radius: 18px;
         }
-        .nova-badge,
+        .smith-badge,
         .hero-pill {
             font-size: 0.82rem;
             padding: 8px 12px;
@@ -320,6 +327,9 @@ def init_session_state():
         "results": [],
         "spoken_prompts": set(),
         "last_audio_text": "",
+        "last_audio_seconds": 0,
+        "proctor_baseline": None,
+        "proctor_alerts": [],
         "completion_payload": None,
         "question_started_at": None,
         "intro_started_at": None,
@@ -376,7 +386,7 @@ def clear_saved_session_token():
 
 def build_intro_script(candidate_name, topic):
     return (
-        f"Hello {candidate_name}. I am Nova, your AI recruiter for today. "
+        f"Hello {candidate_name}. I am Smith, your AI recruiter for today. "
         f"I will guide you through a short and focused interview on {topic}. "
         "For a fair assessment, please avoid using Google, ChatGPT, or any other external source. "
         "Please answer naturally, confidently, and professionally, just as you would in a real interview."
@@ -412,11 +422,11 @@ def render_countdown(deadline):
     <div style="margin: 10px 0 18px 0; padding: 12px 16px; border-radius: 14px;
                 background: rgba(15, 118, 110, 0.08); border: 1px solid rgba(15, 118, 110, 0.12);
                 color: #0f172a; font-weight: 700;">
-        Answer Timer: <span id="nova-timer">{remaining_seconds}</span> seconds left
+        Answer Timer: <span id="smith-timer">{remaining_seconds}</span> seconds left
     </div>
     <script>
     const deadline = {int(deadline * 1000)};
-    const timerElement = window.parent.document.getElementById("nova-timer");
+    const timerElement = window.parent.document.getElementById("smith-timer");
     if (timerElement) {{
       const tick = () => {{
         const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
@@ -505,58 +515,37 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
     st.rerun()
 
 
+def _estimate_speech_seconds(text):
+    words = max(1, len(text.split()))
+    return round(words / 2.5, 1)
+
+
 def safe_audio(text, prompt_key=None):
     if not st.session_state.voice_enabled:
         return
     if prompt_key and prompt_key in st.session_state.spoken_prompts:
         return
+    if not text or not text.strip():
+        return
 
     try:
-        escaped_text = (
-            text.replace("\\", "\\\\")
-            .replace("'", "\\'")
-            .replace("\n", " ")
-            .replace("\r", " ")
-        )
-        components.html(
-            f"""
-            <script>
-            (() => {{
-                const text = '{escaped_text}';
-                const key = '{prompt_key or "default"}';
-                window.__novaSpokenKeys = window.__novaSpokenKeys || {{}};
-                if (window.__novaSpokenKeys[key]) return;
-                const speakNow = () => {{
-                    try {{
-                        window.speechSynthesis.cancel();
-                        const utterance = new SpeechSynthesisUtterance(text);
-                        utterance.rate = 1.15;
-                        utterance.pitch = 1.0;
-                        utterance.volume = 1.0;
-                        const voices = window.speechSynthesis.getVoices();
-                        const preferredVoice = voices.find(v =>
-                            /en-in|en-us|english/i.test(v.lang + ' ' + v.name)
-                        );
-                        if (preferredVoice) utterance.voice = preferredVoice;
-                        window.speechSynthesis.speak(utterance);
-                        window.__novaSpokenKeys[key] = true;
-                    }} catch (e) {{}}
-                }};
-                speakNow();
-                if (window.speechSynthesis.onvoiceschanged !== undefined) {{
-                    window.speechSynthesis.onvoiceschanged = speakNow;
-                }}
-            }})();
-            </script>
-            """,
-            height=0,
-        )
+        audio_path = speak(text)
+        with open(audio_path, "rb") as audio_file:
+            audio_bytes = audio_file.read()
+        try:
+            Path(audio_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        st.audio(audio_bytes, format="audio/mp3", autoplay=True)
         st.session_state.last_audio_text = text
+        st.session_state.last_audio_seconds = _estimate_speech_seconds(text)
         if prompt_key:
             st.session_state.spoken_prompts.add(prompt_key)
     except Exception:
-        st.warning("Voice narration is unavailable right now. The app will continue without audio.")
-        st.session_state.voice_enabled = False
+        st.warning(
+            "Voice narration could not play right now (check your internet connection). "
+            "The app will continue without audio for this line."
+        )
 
 
 def show_camera_tools():
@@ -570,6 +559,39 @@ def show_camera_tools():
         st.success("Face detected successfully. Camera is working.")
     elif st.session_state.face_verified is False and camera_shot is not None:
         st.warning("Camera opened, but face was not detected clearly. Please face the camera directly.")
+
+    if camera_shot is not None and st.session_state.proctor_baseline is None:
+        baseline_result = analyze_proctoring(camera_shot.getvalue())
+        st.session_state.proctor_baseline = baseline_result["histogram"]
+        st.caption("Baseline background captured for cheating detection during the interview.")
+
+
+def run_proctoring_check(current_index, is_clarification):
+    st.markdown("<div class='section-title'>Proctoring Check</div>", unsafe_allow_html=True)
+    st.caption("A quick camera snapshot checks that you are present, facing the screen, and your background has not changed.")
+    frame = st.camera_input(
+        "Proctoring snapshot",
+        key=f"proctor_frame_{current_index}_{'clarify' if is_clarification else 'main'}",
+        label_visibility="collapsed",
+    )
+    if frame is None:
+        return
+
+    result = analyze_proctoring(frame.getvalue(), st.session_state.proctor_baseline)
+    if st.session_state.proctor_baseline is None:
+        st.session_state.proctor_baseline = result["histogram"]
+
+    if not result["face_detected"]:
+        st.warning(result["message"])
+        st.session_state.proctor_alerts.append(f"Q{current_index + 1}: {result['message']}")
+    elif result["looking_away"]:
+        st.warning(result["message"])
+        st.session_state.proctor_alerts.append(f"Q{current_index + 1}: {result['message']}")
+    elif result["background_changed"]:
+        st.warning(result["message"])
+        st.session_state.proctor_alerts.append(f"Q{current_index + 1}: {result['message']}")
+    else:
+        st.success(result["message"])
 
 
 def handle_start_interview(topic):
@@ -608,7 +630,7 @@ def render_auth_screen():
         st.markdown(
             """
             <div class="auth-hero">
-                <div class="nova-badge">SARA Secure Access</div>
+                <div class="smith-badge">Smith Secure Access</div>
                 <h2 class="auth-title">Welcome to Your Interview Workspace</h2>
                 <p class="auth-copy">
                     Sign in once and continue your interview journey securely on this device.
@@ -718,7 +740,7 @@ def render_student_interview_tab():
                 unsafe_allow_html=True,
             )
             st.markdown(
-                "<div class='note-box'>Nova is guiding the session. Speak clearly after the microphone prompt appears.</div>",
+                "<div class='note-box'>Smith is guiding the session. Speak clearly after the microphone prompt appears.</div>",
                 unsafe_allow_html=True,
             )
 
@@ -727,12 +749,12 @@ def render_student_interview_tab():
         if st.session_state.started and st.session_state.interview_plan:
             if st.session_state.conversation_stage == "intro":
                 st.markdown("<div class='card'>", unsafe_allow_html=True)
-                st.markdown("<div class='nova-badge'>Nova AI Recruiter</div>", unsafe_allow_html=True)
+                st.markdown("<div class='smith-badge'>Smith AI Recruiter</div>", unsafe_allow_html=True)
                 st.markdown("<div class='section-title'>Interview Introduction</div>", unsafe_allow_html=True)
                 intro_text = st.session_state.live_feedback or build_intro_script(current_user["full_name"], topic)
                 st.info(intro_text)
                 safe_audio(intro_text, prompt_key="intro")
-                st.caption("Nova is introducing the interview. The first question will start automatically.")
+                st.caption("Smith is introducing the interview. The first question will start automatically.")
                 st.markdown("</div>", unsafe_allow_html=True)
                 time.sleep(6)
                 st.session_state.conversation_stage = "question"
@@ -748,12 +770,15 @@ def render_student_interview_tab():
                 if is_clarification
                 else current_round["question"]
             )
+            question_prompt_key = f"{'clarify' if is_clarification else 'question'}_{current_index}"
+            voice_already_played = question_prompt_key in st.session_state.spoken_prompts
+
             if st.session_state.question_started_at is None:
                 st.session_state.question_started_at = time.time()
             deadline = st.session_state.question_started_at + ANSWER_TIME_LIMIT
 
             st.markdown("<div class='card'>", unsafe_allow_html=True)
-            st.markdown("<div class='nova-badge'>Nova AI Recruiter</div>", unsafe_allow_html=True)
+            st.markdown("<div class='smith-badge'>Smith AI Recruiter</div>", unsafe_allow_html=True)
             st.markdown(
                 f"<div class='section-title'>Question {current_index + 1} of {len(st.session_state.interview_plan)}</div>",
                 unsafe_allow_html=True,
@@ -766,19 +791,24 @@ def render_student_interview_tab():
             st.caption(
                 f"Difficulty: {current_round.get('difficulty', 'Not specified')} | Time limit: {ANSWER_TIME_LIMIT} seconds"
             )
+            if not voice_already_played and st.session_state.voice_enabled:
+                safe_audio(prompt_text, prompt_key=question_prompt_key)
+                st.info("Smith is speaking the question. The microphone will open automatically once it finishes.")
+                st.session_state.question_started_at = time.time() + st.session_state.last_audio_seconds
+                time.sleep(min(st.session_state.last_audio_seconds, 8))
+                st.rerun()
+                return
+
+            safe_audio(prompt_text, prompt_key=question_prompt_key)
             render_countdown(deadline)
-            safe_audio(
-                prompt_text,
-                prompt_key=f"{'clarify' if is_clarification else 'question'}_{current_index}",
-            )
 
             audio_answer = st.audio_input(
-                "Speak your answer",
+                "Speak your answer (recording opens automatically, click stop when you are done)",
                 key=f"audio_answer_{current_index}_{'clarify' if is_clarification else 'main'}",
             )
             transcript, transcript_error = transcribe_audio(audio_answer)
             if audio_answer is not None and not transcript and not transcript_error:
-                st.info("Audio received. Nova is processing your answer.")
+                st.info("Audio received. Smith is processing your answer.")
             if transcript_error:
                 st.warning(transcript_error)
             if transcript:
@@ -786,7 +816,7 @@ def render_student_interview_tab():
                 st.write(f"Transcript: {transcript}")
             else:
                 st.caption(
-                    "Click the microphone, record your answer, and stop recording. Nova will review it automatically after transcription."
+                    "Click the microphone, record your answer, and stop recording. Smith will review it automatically after transcription."
                 )
 
             answer = transcript.strip()
@@ -804,6 +834,9 @@ def render_student_interview_tab():
                         f"{current_index}|{'clarify' if is_clarification else 'main'}|timeout"
                     )
                     finalize_current_answer(current_user, current_round, "", True)
+
+            if st.session_state.camera_enabled:
+                run_proctoring_check(current_index, is_clarification)
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -829,7 +862,7 @@ def render_student_interview_tab():
                     )
                 )
                 st.write("We have reached the end of the interview.")
-                st.caption("Nova has completed the interview assessment and prepared your final result summary.")
+                st.caption("Smith has completed the interview assessment and prepared your final result summary.")
                 st.markdown("</div>", unsafe_allow_html=True)
                 st.download_button(
                     label="Download Text Report",
@@ -1083,6 +1116,8 @@ def render_admin_tab():
 
 def render_app():
     user = st.session_state.current_user
+    if LOGO_PATH.exists():
+        st.sidebar.image(str(LOGO_PATH), use_container_width=True)
     st.sidebar.title("Navigation")
     st.sidebar.write(f"Current Mode: {'Admin' if st.session_state.admin_mode else 'Student'}")
     st.sidebar.write(f"Signed in as: {user['full_name']}")
@@ -1136,8 +1171,8 @@ if not st.session_state.auth_checked:
 st.markdown(
     """
     <div class="card">
-        <div class="nova-badge">SARA Interview Suite</div>
-        <h1 class="hero-title">SARA</h1>
+        <div class="smith-badge">Smith Interview Suite</div>
+        <h1 class="hero-title">Smith</h1>
         <p class="hero-subtitle">
             Recruiter-style mock interviews with smart feedback, analytics, and report export.
         </p>

@@ -1,7 +1,7 @@
 # PPT Content
 
 ## Slide 1
-Title: Nova AI Interview Simulator
+Title: Smith AI Interview Simulator
 
 ## Slide 2
 Problem Statement
@@ -35,7 +35,7 @@ System Architecture
 Workflow
 - User login
 - Topic selection
-- Interview introduction by Nova
+- Interview introduction by Smith
 - Question-answer rounds
 - Feedback generation
 - Final report and history save

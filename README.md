@@ -1,14 +1,14 @@
-# SARA - AI Interview Simulator
+# Smith - AI Interview Simulator
 
-SARA is a final year project built using Python, Streamlit, and SQLite to help students prepare for technical interviews in a realistic and structured way. The platform includes secure login, a large interview practice library, performance analytics, exportable reports, and a voice-guided AI interviewer named Nova.
+Smith is a final year project built using Python, Streamlit, and SQLite to help students prepare for technical interviews in a realistic and structured way. The platform includes secure login, a large interview practice library, performance analytics, exportable reports, and a voice-guided AI interviewer named Smith.
 
 ## Live Demo
 
-[Open the live app](https://nova-ai-interview-simulator-xrcdue6mbfnh2zvsn5x4qg.streamlit.app)
+[Open the live app](https://smith-ai-interview-simulator-xrcdue6mbfnh2zvsn5x4qg.streamlit.app)
 
 ## Project Overview
 
-SARA is designed as an interview preparation platform for students who want to practice technical interviews before placements. It combines guided mock interviews, AI-style evaluation, saved progress, and interview history into one system.
+Smith is designed as an interview preparation platform for students who want to practice technical interviews before placements. It combines guided mock interviews, AI-style evaluation, saved progress, and interview history into one system.
 
 The app supports topic-based mock interviews across core computer science areas and gives structured feedback to help users improve clarity, confidence, and technical explanation.
 
@@ -18,7 +18,7 @@ The app supports topic-based mock interviews across core computer science areas 
 - Student and admin access modes
 - 500+ interview practice questions with model answers
 - Topic-based mock interviews in Python, DSA, DBMS, and OOP
-- Voice-guided AI interviewer experience through Nova
+- Voice-guided AI interviewer experience through Smith
 - Smart answer evaluation with feedback and scoring
 - Performance analytics dashboard
 - Interview history tracking
@@ -70,7 +70,7 @@ cd C:\Users\ASUS\Desktop\AI_Interview_Simulator
 
 Expected output:
 
-- `dist\NovaInterviewSimulator\NovaInterviewSimulator.exe`
+- `dist\SmithInterviewSimulator\SmithInterviewSimulator.exe`
 
 ## Login Behavior
 

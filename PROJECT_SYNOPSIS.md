@@ -1,7 +1,7 @@
 # Project Synopsis
 
 ## Title
-Nova AI Interview Simulator
+Smith AI Interview Simulator
 
 ## Objective
 The objective of this project is to create a professional interview preparation platform that helps students practice technical interviews in a structured, realistic, and self-evaluative manner.

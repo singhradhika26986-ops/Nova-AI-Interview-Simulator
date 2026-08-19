@@ -19,7 +19,7 @@ def generate_report_text(user_name, topic, results):
     recommendation = build_recommendation(average_score)
 
     lines = [
-        "SARA Interview Assessment Report",
+        "Smith Interview Assessment Report",
         "=" * 36,
         f"Candidate: {user_name}",
         f"Interview Domain: {topic}",
@@ -65,7 +65,7 @@ def generate_report_pdf(user_name, topic, results):
     y = height - 0.8 * inch
 
     pdf.setFont("Helvetica-Bold", 16)
-    pdf.drawString(x_margin, y, "SARA Interview Report")
+    pdf.drawString(x_margin, y, "Smith Interview Report")
     y -= 0.35 * inch
 
     pdf.setFont("Helvetica", 11)
