@@ -173,7 +173,8 @@ def list_recent_interviews(limit=10):
         cursor = connection.execute(
             """
             SELECT interviews.id, users.full_name, users.email, interviews.topic,
-                   interviews.average_score, interviews.recommendation, interviews.created_at
+                   interviews.average_score, interviews.recommendation, interviews.created_at,
+                   interviews.rounds_json
             FROM interviews
             JOIN users ON users.id = interviews.user_id
             ORDER BY datetime(interviews.created_at) DESC, interviews.id DESC
