@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from pathlib import Path
 
@@ -25,14 +26,128 @@ from database import (
     save_interview,
     upsert_practice_progress,
 )
-from face_detection import analyze_proctoring, detect_face
+from face_detection import analyze_frame, detect_face
 from qa_dataset import get_total_practice_question_count
 from question_generator import build_interview_set, get_daily_practice_set, get_practice_questions, get_topics
 from report_export import generate_report_pdf, generate_report_text
 from voice import speak
 
+try:
+    from streamlit_webrtc import webrtc_streamer, VideoProcessorBase
+    import av
+    WEBRTC_AVAILABLE = True
+except Exception:
+    WEBRTC_AVAILABLE = False
+
 
 MAX_QUESTIONS = 5
+
+
+if WEBRTC_AVAILABLE:
+
+    class ProctorVideoProcessor(VideoProcessorBase):
+        """Continuously analyzes the candidate's webcam feed in the background
+        (a few frames per second) and raises a flag when it looks like the
+        candidate has turned away, left the frame, or the background has
+        changed. The main app polls this flag every few seconds and has
+        Smith speak a warning when it trips.
+        """
+
+        def __init__(self):
+            self.lock = threading.Lock()
+            self.away_streak = 0
+            self.alert_flag = None
+            self.baseline_hist = None
+            self.last_check_ts = 0.0
+
+        def recv(self, frame):
+            img = frame.to_ndarray(format="bgr24")
+            now = time.time()
+            if now - self.last_check_ts > 0.6:
+                self.last_check_ts = now
+                try:
+                    result = analyze_frame(img, self.baseline_hist)
+                    with self.lock:
+                        if self.baseline_hist is None:
+                            self.baseline_hist = result["histogram"]
+                        if not result["face_detected"]:
+                            self.away_streak += 1
+                            if self.away_streak >= 4 and self.alert_flag is None:
+                                self.alert_flag = "no_face"
+                                self.away_streak = 0
+                        elif result["looking_away"]:
+                            self.away_streak += 1
+                            if self.away_streak >= 4 and self.alert_flag is None:
+                                self.alert_flag = "looking_away"
+                                self.away_streak = 0
+                        elif result["background_changed"]:
+                            if self.alert_flag is None:
+                                self.alert_flag = "background_changed"
+                            self.away_streak = 0
+                        else:
+                            self.away_streak = 0
+                except Exception:
+                    pass
+            return frame
+
+        def pop_alert(self):
+            with self.lock:
+                alert = self.alert_flag
+                self.alert_flag = None
+            return alert
+
+
+    PROCTOR_MESSAGES = {
+        "no_face": "Please sit properly in front of the camera. Do not move away.",
+        "looking_away": "Please look at the screen. Do not try to cheat from any external source.",
+        "background_changed": "Your background has changed. Do not try to cheat from any external source.",
+    }
+
+
+def render_proctor_stream():
+    if not WEBRTC_AVAILABLE:
+        st.caption("Live camera monitoring needs the streamlit-webrtc package.")
+        return None
+    ctx = webrtc_streamer(
+        key="smith-proctor-stream",
+        video_processor_factory=ProctorVideoProcessor,
+        media_stream_constraints={"video": True, "audio": False},
+        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+    )
+    return ctx
+
+
+def poll_proctor_alerts(ctx):
+    if ctx is None or not ctx.state.playing or ctx.video_processor is None:
+        return
+    alert = ctx.video_processor.pop_alert()
+    if alert:
+        message = PROCTOR_MESSAGES.get(alert, "Please stay visible and still in front of the camera.")
+        st.warning(f"⚠️ {message}")
+        safe_audio(message, prompt_key=f"proctor_{alert}_{int(time.time())}")
+
+
+def render_proctor_heartbeat(interval_seconds=4):
+    components.html(
+        f"""
+        <script>
+        setInterval(() => {{
+            try {{
+                const buttons = window.parent.document.querySelectorAll('button');
+                for (const btn of buttons) {{
+                    if (btn.innerText.includes("__proctor_heartbeat__")) {{
+                        btn.click();
+                        break;
+                    }}
+                }}
+            }} catch (e) {{}}
+        }}, {int(interval_seconds * 1000)});
+        </script>
+        """,
+        height=0,
+    )
+    st.markdown('<div class="hb-marker"></div>', unsafe_allow_html=True)
+    return st.button("__proctor_heartbeat__", key=f"proctor_heartbeat_{int(time.time() // interval_seconds)}")
 ANSWER_TIME_LIMIT = 30
 TOTAL_PRACTICE_QUESTIONS = get_total_practice_question_count()
 SESSION_FILE = Path(__file__).with_name("remembered_session.json")
@@ -383,6 +498,9 @@ st.markdown(
         0%, 100% { transform: scaleY(0.4); }
         50% { transform: scaleY(1); }
     }
+    .hb-marker + div[data-testid="stButton"] {
+        display: none;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -569,6 +687,7 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
         )
         st.session_state.live_feedback = skip_message
         safe_audio(skip_message, prompt_key=f"skip_{current_index}")
+        time.sleep(max(2, min(st.session_state.last_audio_seconds + 1, 10)))
 
         if current_index + 1 < len(st.session_state.interview_plan):
             st.session_state.question_index += 1
@@ -599,6 +718,7 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
             "I would like a clearer explanation. Please answer once more with a short definition, one relevant example, and a well-structured response."
         )
         safe_audio(st.session_state.live_feedback, prompt_key=f"clarify_intro_{current_index}")
+        time.sleep(max(2, min(st.session_state.last_audio_seconds + 1, 10)))
         st.rerun()
 
     if st.session_state.clarification_requested:
@@ -612,24 +732,37 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
             **evaluation,
         }
     )
-    st.session_state.live_feedback = (
-        "Thank you for your response. "
-        + (
-            "Your explanation was clear and well-structured. No major changes are needed."
-            if evaluation["overall_score"] >= 7
-            else "You should explain the concept more clearly, with a little more depth and structure."
+    matched_keywords = evaluation.get("strengths", [])
+    keyword_line = ""
+    for strength_line in matched_keywords:
+        if "key technical points" in strength_line:
+            keyword_line = strength_line.replace("You covered", "You mentioned").rstrip(".")
+            break
+
+    if evaluation["overall_score"] >= 7:
+        spoken_feedback = (
+            (keyword_line + ". " if keyword_line else "")
+            + "That was a clear and well-structured answer."
         )
+    else:
+        spoken_feedback = (
+            (keyword_line + ". " if keyword_line else "")
+            + "Try to add a bit more depth and structure next time."
+        )
+
+    is_last_question = current_index + 1 >= len(st.session_state.interview_plan)
+    spoken_feedback += (
+        " That was the last question, let's wrap up." if is_last_question else " Let's move to the next question."
     )
-    safe_audio(st.session_state.live_feedback, prompt_key=f"feedback_{current_index}")
+
+    st.session_state.live_feedback = spoken_feedback
+    safe_audio(spoken_feedback, prompt_key=f"feedback_{current_index}")
+    time.sleep(max(2, min(st.session_state.last_audio_seconds + 1, 10)))
 
     if current_index + 1 < len(st.session_state.interview_plan):
         st.session_state.question_index += 1
         st.session_state.question_started_at = None
         st.session_state.conversation_stage = "question"
-        safe_audio(
-            "Your answer has been reviewed. We will now move to the next question.",
-            prompt_key=f"next_{current_index}",
-        )
     else:
         st.session_state.started = False
         st.session_state.conversation_stage = "completed"
@@ -686,7 +819,7 @@ def safe_audio(text, prompt_key=None):
 
 def show_camera_tools():
     st.markdown("<div class='section-title'>Camera Readiness</div>", unsafe_allow_html=True)
-    st.caption("Allow browser camera permission and capture one frame for face verification.")
+    st.caption("Allow browser camera permission so Smith can verify you're ready before starting.")
     camera_shot = st.camera_input("Camera Check", key="browser_camera_input")
     if camera_shot is not None:
         st.session_state.face_verified = detect_face(camera_shot.getvalue())
@@ -695,39 +828,6 @@ def show_camera_tools():
         st.success("Face detected successfully. Camera is working.")
     elif st.session_state.face_verified is False and camera_shot is not None:
         st.warning("Camera opened, but face was not detected clearly. Please face the camera directly.")
-
-    if camera_shot is not None and st.session_state.proctor_baseline is None:
-        baseline_result = analyze_proctoring(camera_shot.getvalue())
-        st.session_state.proctor_baseline = baseline_result["histogram"]
-        st.caption("Baseline background captured for cheating detection during the interview.")
-
-
-def run_proctoring_check(current_index, is_clarification):
-    st.markdown("<div class='section-title'>Proctoring Check</div>", unsafe_allow_html=True)
-    st.caption("A quick camera snapshot checks that you are present, facing the screen, and your background has not changed.")
-    frame = st.camera_input(
-        "Proctoring snapshot",
-        key=f"proctor_frame_{current_index}_{'clarify' if is_clarification else 'main'}",
-        label_visibility="collapsed",
-    )
-    if frame is None:
-        return
-
-    result = analyze_proctoring(frame.getvalue(), st.session_state.proctor_baseline)
-    if st.session_state.proctor_baseline is None:
-        st.session_state.proctor_baseline = result["histogram"]
-
-    if not result["face_detected"]:
-        st.warning(result["message"])
-        st.session_state.proctor_alerts.append(f"Q{current_index + 1}: {result['message']}")
-    elif result["looking_away"]:
-        st.warning(result["message"])
-        st.session_state.proctor_alerts.append(f"Q{current_index + 1}: {result['message']}")
-    elif result["background_changed"]:
-        st.warning(result["message"])
-        st.session_state.proctor_alerts.append(f"Q{current_index + 1}: {result['message']}")
-    else:
-        st.success(result["message"])
 
 
 def handle_start_interview(topic):
@@ -893,7 +993,7 @@ def render_student_interview_tab():
                 safe_audio(intro_text, prompt_key="intro")
                 st.caption("Smith is introducing the interview. The first question will start automatically.")
                 st.markdown("</div>", unsafe_allow_html=True)
-                time.sleep(6)
+                time.sleep(max(4, min(st.session_state.last_audio_seconds + 1, 20)))
                 st.session_state.conversation_stage = "question"
                 st.session_state.question_started_at = None
                 st.rerun()
@@ -992,8 +1092,12 @@ def render_student_interview_tab():
                     )
                     finalize_current_answer(current_user, current_round, "", True)
 
-            if st.session_state.camera_enabled:
-                run_proctoring_check(current_index, is_clarification)
+            if st.session_state.camera_enabled and WEBRTC_AVAILABLE:
+                st.markdown("<div class='section-title'>Live Proctoring</div>", unsafe_allow_html=True)
+                st.caption("Camera stays on during the interview. Smith will speak up if you look away, leave the frame, or the background changes.")
+                ctx = render_proctor_stream()
+                poll_proctor_alerts(ctx)
+                render_proctor_heartbeat()
 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1076,7 +1180,10 @@ def render_student_interview_tab():
         st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        show_camera_tools()
+        if not st.session_state.started:
+            show_camera_tools()
+        else:
+            st.caption("Camera is live in the main interview panel while the interview is running.")
         st.markdown("</div>", unsafe_allow_html=True)
 
 
