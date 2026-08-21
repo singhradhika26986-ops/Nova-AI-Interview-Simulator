@@ -54,56 +54,54 @@ def detect_face(image_bytes=None):
     return len(faces) > 0
 
 
-def analyze_proctoring(image_bytes, baseline_hist=None):
-    """Run a lightweight proctoring check on a single camera frame.
+def analyze_frame(frame, baseline_hist=None):
+    """Run a lightweight proctoring check on a single raw BGR frame (numpy array).
 
     Returns a dict with:
       face_detected      - a face was found in the frame
-      eyes_detected      - at least one eye was found inside the face region
-      looking_away       - face present but eyes not found (likely turned
-                            away or looking down/sideways)
-      background_changed - the scene behind the candidate shifted a lot
-                            compared to the baseline frame captured at the
-                            start of the interview (possible camera move,
-                            person swap, or new person entering frame)
-      histogram           - the current frame's color histogram, to be
-                            stored and passed back in as the next
-                            baseline_hist
-      message             - a short human-readable status
+      eyes_detected       - at least one eye was found inside the face region
+      looking_away        - face present but eyes not found, OR the face is
+                             shifted far from the frame center (head turned
+                             left/right/up/down)
+      background_changed  - the scene behind the candidate shifted a lot
+                             compared to the baseline frame captured earlier
+      histogram            - the current frame's color histogram, to be
+                             stored and passed back in as the next
+                             baseline_hist
+      message              - a short human-readable status
     """
-    if not _load_cascades():
-        return {
-            "face_detected": None,
-            "eyes_detected": None,
-            "looking_away": False,
-            "background_changed": False,
-            "histogram": baseline_hist,
-            "message": "Camera analysis is unavailable on this device.",
-        }
+    empty_result = {
+        "face_detected": False,
+        "eyes_detected": False,
+        "looking_away": False,
+        "background_changed": False,
+        "histogram": baseline_hist,
+        "message": "Camera analysis is unavailable.",
+    }
 
-    frame = _decode_frame(image_bytes)
-    if frame is None:
-        return {
-            "face_detected": False,
-            "eyes_detected": False,
-            "looking_away": False,
-            "background_changed": False,
-            "histogram": baseline_hist,
-            "message": "Could not read the camera frame.",
-        }
+    if not _load_cascades() or frame is None:
+        return empty_result
 
+    frame_h, frame_w = frame.shape[:2]
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = _face_cascade.detectMultiScale(gray, 1.3, 5)
     face_detected = len(faces) > 0
 
     eyes_detected = False
+    off_center = False
     if face_detected:
         x, y, w, h = max(faces, key=lambda box: box[2] * box[3])
         face_roi = gray[y:y + h, x:x + w]
         eyes = _eye_cascade.detectMultiScale(face_roi, 1.1, 8)
         eyes_detected = len(eyes) > 0
 
-    looking_away = face_detected and not eyes_detected
+        face_center_x = x + w / 2
+        face_center_y = y + h / 2
+        horiz_offset = abs(face_center_x - frame_w / 2) / (frame_w / 2)
+        vert_offset = abs(face_center_y - frame_h / 2) / (frame_h / 2)
+        off_center = horiz_offset > 0.32 or vert_offset > 0.38
+
+    looking_away = (face_detected and not eyes_detected) or off_center
 
     hist = cv2.calcHist([frame], [0, 1, 2], None, [8, 8, 8], [0, 256, 0, 256, 0, 256])
     hist = cv2.normalize(hist, hist).flatten()
@@ -116,11 +114,11 @@ def analyze_proctoring(image_bytes, baseline_hist=None):
         background_changed = similarity < 0.5
 
     if not face_detected:
-        message = "No face detected. Please stay in front of the camera."
+        message = "No face detected. Please sit in front of the camera."
     elif looking_away:
-        message = "Please look at the screen. Eyes were not detected."
+        message = "Head or eye movement detected."
     elif background_changed:
-        message = "Background changed significantly since the interview started."
+        message = "Background changed significantly."
     else:
         message = "Camera check normal."
 
@@ -132,3 +130,18 @@ def analyze_proctoring(image_bytes, baseline_hist=None):
         "histogram": hist.tolist(),
         "message": message,
     }
+
+
+def analyze_proctoring(image_bytes, baseline_hist=None):
+    """Same as analyze_frame but takes JPEG/PNG bytes (e.g. from st.camera_input)."""
+    frame = _decode_frame(image_bytes)
+    if frame is None:
+        return {
+            "face_detected": False,
+            "eyes_detected": False,
+            "looking_away": False,
+            "background_changed": False,
+            "histogram": baseline_hist,
+            "message": "Could not read the camera frame.",
+        }
+    return analyze_frame(frame, baseline_hist)
