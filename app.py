@@ -953,7 +953,6 @@ def render_student_interview_tab():
             if action_col1.button("Start Interview", type="primary", use_container_width=True):
                 handle_start_interview(topic)
                 st.session_state.live_feedback = build_intro_script(current_user["full_name"], topic)
-                safe_audio(st.session_state.live_feedback, prompt_key="intro")
                 st.rerun()
             if action_col2.button("Reset Current Interview", use_container_width=True):
                 reset_interview_state()
@@ -996,6 +995,7 @@ def render_student_interview_tab():
                 time.sleep(max(4, min(st.session_state.last_audio_seconds + 1, 20)))
                 st.session_state.conversation_stage = "question"
                 st.session_state.question_started_at = None
+                st.session_state.live_feedback = None
                 st.rerun()
                 return
 
