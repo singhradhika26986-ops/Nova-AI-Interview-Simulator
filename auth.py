@@ -58,9 +58,9 @@ def authenticate_user(email, password):
 
 
 def ensure_admin_user():
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@interviewsimulator.local")
-    admin_password = os.getenv("ADMIN_PASSWORD", "Admin@123")
-    admin_name = os.getenv("ADMIN_NAME", "Project Admin")
+    admin_email = os.getenv("ADMIN_EMAIL", "rajnikumari35741@gmail.com")
+    admin_password = os.getenv("ADMIN_PASSWORD", "Rajnisingh@123")
+    admin_name = os.getenv("ADMIN_NAME", "NeuralixLabs")
 
     if not get_user_by_email(admin_email):
         create_user(admin_name, admin_email, hash_password(admin_password), role="admin")
