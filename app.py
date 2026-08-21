@@ -682,6 +682,7 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
         st.session_state.results.append(
             {
                 "question": current_round["question"],
+                "answer": answer.strip() or "(No answer given — time expired)",
                 **evaluation,
             }
         )
@@ -729,6 +730,7 @@ def finalize_current_answer(current_user, current_round, answer, time_expired):
     st.session_state.results.append(
         {
             "question": current_round["question"],
+            "answer": answer.strip(),
             **evaluation,
         }
     )
@@ -1331,7 +1333,7 @@ def render_profile_tab():
 
 def render_admin_tab():
     summary = get_admin_summary()
-    recent_interviews = list_recent_interviews(limit=12)
+    recent_interviews = list_recent_interviews(limit=50)
 
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown("<div class='section-title'>Admin Analytics</div>", unsafe_allow_html=True)
@@ -1363,16 +1365,33 @@ def render_admin_tab():
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<div class='section-title'>Recent Interviews</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>Every Candidate's Full Interview History</div>", unsafe_allow_html=True)
+    st.caption("Every interview taken through this app link is recorded here — including each question, the candidate's exact spoken answer, and the score given.")
+    search_name = st.text_input("Filter by candidate name or email", key="admin_history_search")
+
     if recent_interviews:
         for interview in recent_interviews:
-            st.markdown("<div class='mini-card'>", unsafe_allow_html=True)
-            st.write(f"Candidate: {interview['full_name']} ({interview['email']})")
-            st.write(f"Topic: {interview['topic']}")
-            st.write(f"Score: {interview['average_score']}/10")
-            st.write(f"Recommendation: {interview['recommendation']}")
-            st.write(f"Created At: {interview['created_at']}")
-            st.markdown("</div>", unsafe_allow_html=True)
+            if search_name and search_name.lower() not in (interview["full_name"] + interview["email"]).lower():
+                continue
+            with st.expander(
+                f"{interview['full_name']} ({interview['email']}) — {interview['topic']} — "
+                f"{interview['average_score']}/10 — {interview['created_at']}"
+            ):
+                st.write(f"Recommendation: {interview['recommendation']}")
+                try:
+                    rounds = json.loads(interview["rounds_json"])
+                except Exception:
+                    rounds = []
+                if not rounds:
+                    st.caption("No detailed round data was saved for this interview.")
+                for i, round_item in enumerate(rounds, start=1):
+                    st.markdown("<div class='mini-card'>", unsafe_allow_html=True)
+                    st.write(f"**Q{i}: {round_item.get('question', 'N/A')}**")
+                    st.write(f"Candidate's answer: {round_item.get('answer', '(not recorded)')}")
+                    st.write(f"Score: {round_item.get('overall_score', 'N/A')}/10 — {round_item.get('verdict', '')}")
+                    if round_item.get("summary"):
+                        st.caption(round_item["summary"])
+                    st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("No interview records yet.")
     st.markdown("</div>", unsafe_allow_html=True)
